@@ -2,6 +2,7 @@ import os
 import random
 import google.generativeai as genai
 from datetime import datetime
+import subprocess  # 깃허브 업로드를 위해 추가
 
 # 1. 제미나이 설정
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -15,7 +16,7 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 posts_dir = "content/posts"
 os.makedirs(posts_dir, exist_ok=True)
 
-# 3. 주제 카테고리 (더 구체적이고 흥미로운 주제들)
+# 3. 주제 카테고리
 topics = [
     "Secret Kitchen Hacks used by Professional Chefs",
     "Psychological Productivity Tricks to beat Procrastination",
@@ -27,7 +28,7 @@ topics = [
 ]
 selected_topic = random.choice(topics)
 
-# 4. 고품질 전문가 페르소나 프롬프트 (핵심!)
+# 4. 고품질 전문가 페르소나 프롬프트
 prompt = f"""
 System Role: You are a world-class English lifestyle blogger and SEO expert with 10+ years of experience.
 Task: Write a high-quality, engaging, and professional blog post about '{selected_topic}'.
@@ -60,12 +61,23 @@ description: "[Write a compelling 150-character meta description for Google Sear
 # 5. 글 생성 및 저장
 try:
     response = model.generate_content(prompt)
-    # 파일명을 제목 기반으로 하면 좋지만, 일단 안전하게 타임스탬프로 생성
     filename = f"{posts_dir}/post-{datetime.now().strftime('%Y%m%d-%H%M%S')}.md"
     
     with open(filename, "w", encoding="utf-8") as f:
         f.write(response.text)
     print(f"✅ High-Quality Post Generated: {filename}")
+
+    # --- 추가된 깃허브 자동 업로드 부분 ---
+    # 깃허브 액션 환경에서 실행될 때 파일을 커밋하고 푸시합니다.
+    print("🚀 Starting GitHub Upload...")
+    subprocess.run(["git", "config", "--global", "user.name", "github-actions[bot]"])
+    subprocess.run(["git", "config", "--global", "user.email", "github-actions[bot]@users.noreply.github.com"])
+    subprocess.run(["git", "add", "."])
+    subprocess.run(["git", "commit", "-m", f"Add new post: {selected_topic}"])
+    subprocess.run(["git", "push"])
+    print("🎉 Successfully uploaded to GitHub!")
+    # ----------------------------------
+
 except Exception as e:
     print(f"❌ Error: {e}")
     exit(1)
